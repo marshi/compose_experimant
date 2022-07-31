@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.SnapSpec
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -54,7 +55,7 @@ fun List() {
 @Composable
 fun AnimatedContentSample() {
     var count by remember { mutableStateOf(0) }
-    Column() {
+    Column {
         AnimatedContent(
             targetState = count,
             transitionSpec = {
@@ -82,7 +83,12 @@ fun AnimatedContentSample() {
             Text("button")
         }
         Row() {
-            MarqueeText(text = "ariuaoeuoiauoijaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            MarqueeText(
+                text = "123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                modifier = Modifier.width(200.dp)
+            )
+            Text("-------| ")
+            Text("-------")
         }
     }
 }

@@ -4,7 +4,9 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -12,7 +14,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
@@ -40,7 +41,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
@@ -48,7 +48,6 @@ fun MarqueeText(
     text: String,
     modifier: Modifier = Modifier,
     textModifier: Modifier = Modifier,
-    gradientEdgeColor: Color = Color.White,
     color: Color = Color.Unspecified,
     fontSize: TextUnit = TextUnit.Unspecified,
     fontStyle: FontStyle? = null,
@@ -62,6 +61,9 @@ fun MarqueeText(
     softWrap: Boolean = true,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current,
+    durationMsPerWidth: Int = 7500,
+    delayMs: Int = 3000,
+    spaceRatio: Float = 0.3f,
 ) {
     val createText = @Composable { localModifier: Modifier ->
         Text(
@@ -88,14 +90,12 @@ fun MarqueeText(
     LaunchedEffect(textLayoutInfoState.value) {
         val textLayoutInfo = textLayoutInfoState.value ?: return@LaunchedEffect
         if (textLayoutInfo.textWidth <= textLayoutInfo.containerWidth) return@LaunchedEffect
-        // container幅分のスクロールに7500msかける
-        val duration = 7500 * textLayoutInfo.textWidth / textLayoutInfo.containerWidth
-        val delay = 1000L
+        val duration = durationMsPerWidth * textLayoutInfo.textWidth / textLayoutInfo.containerWidth
         val animation = TargetBasedAnimation(
             animationSpec = infiniteRepeatable(
                 animation = tween(
                     durationMillis = duration,
-                    delayMillis = 1000,
+                    delayMillis = delayMs,
                     easing = LinearEasing,
                 ),
                 repeatMode = RepeatMode.Restart
@@ -110,7 +110,7 @@ fun MarqueeText(
                 val playTime = withFrameNanos { it } - startTime
                 offset = (animation.getValueFromNanos(playTime))
             } while (!animation.isFinishedFromNanos(playTime))
-            delay(delay)
+            delay(delayMs.toLong())
         } while (true)
     }
 
@@ -122,16 +122,15 @@ fun MarqueeText(
             createText(textModifier)
         }.first().measure(infiniteWidthConstraints)
 
-        var gradient: Placeable? = null
-
         var secondPlaceableWithOffset: Pair<Placeable, Int>? = null
         if (mainText.width <= constraints.maxWidth) {
             mainText = subcompose(MarqueeLayers.SecondaryText) {
-                createText(textModifier.fillMaxWidth())
+//                createText(textModifier.fillMaxWidth())
+                createText(textModifier)
             }.first().measure(constraints)
             textLayoutInfoState.value = null
         } else {
-            val spacing = constraints.maxWidth * 2 / 3
+            val spacing = (constraints.maxWidth * spaceRatio).toInt()
             textLayoutInfoState.value = TextLayoutInfo(
                 textWidth = mainText.width + spacing, // テキストの長さ + widthの2/3の長さ
                 containerWidth = constraints.maxWidth // 画面幅
@@ -143,15 +142,9 @@ fun MarqueeText(
                 // 2週目以降のテキストのスタート位置が描画範囲内にある
                 secondPlaceableWithOffset = subcompose(MarqueeLayers.SecondaryText) {
                     createText(textModifier)
-                }.first().measure(infiniteWidthConstraints) to secondTextOffset
+//                }.first().measure(infiniteWidthConstraints) to secondTextOffset
+                }.first().measure(constraints) to secondTextOffset
             }
-            gradient = subcompose(MarqueeLayers.EdgesGradient) {
-                Row {
-                    GradientEdge(gradientEdgeColor, Color.Transparent)
-                    Spacer(Modifier.weight(1f))
-                    GradientEdge(Color.Transparent, gradientEdgeColor)
-                }
-            }.first().measure(constraints.copy(maxHeight = mainText.height))
         }
 
         layout(
@@ -162,33 +155,16 @@ fun MarqueeText(
             secondPlaceableWithOffset?.let { (placable, secondTextOffset) ->
                 placable.place(secondTextOffset, 0)
             }
-            gradient?.place(0, 0)
         }
     }
 }
 
-@Composable
-private fun GradientEdge(
-    startColor: Color, endColor: Color,
-) {
-    Box(
-        modifier = Modifier
-            .width(10.dp)
-            .fillMaxHeight()
-            .background(
-                brush = Brush.horizontalGradient(
-                    0f to startColor, 1f to endColor,
-                )
-            )
-    )
-}
-
-@Preview
+@Preview(widthDp = 100)
 @Composable
 fun MarqeeTextPreview() {
     Column {
         MarqueeText(text = "aa")
-        MarqueeText(text = "aiueoaiueo")
+        MarqueeText(text = "aiueoaiueoaiueoaiueoaiueoaiueoaiueoaiueo")
     }
 }
 
