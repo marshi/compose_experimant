@@ -2,31 +2,20 @@ package dev.marshi.compose_experimant
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateValue
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
@@ -41,8 +30,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
-import kotlinx.coroutines.delay
 
+/**
+ * テキストの幅がレイアウトの幅よりも長いときにmarquee効果を効果を効かせる.
+ *
+ * 内部的には、Textを２つ横並びに作りそれらをアニメーションさせて横に流している.
+ *
+ */
 @Composable
 fun MarqueeText(
     text: String,
@@ -85,13 +79,16 @@ fun MarqueeText(
             style = style,
         )
     }
-    var offset by remember { mutableStateOf(0) }
     val textLayoutInfoState = remember { mutableStateOf<TextLayoutInfo?>(null) }
-    LaunchedEffect(textLayoutInfoState.value) {
-        val textLayoutInfo = textLayoutInfoState.value ?: return@LaunchedEffect
-        if (textLayoutInfo.textWidth <= textLayoutInfo.containerWidth) return@LaunchedEffect
+    val textLayoutInfo = textLayoutInfoState.value
+    val transition = rememberInfiniteTransition()
+    val initialValue = 0
+    val offset by if (textLayoutInfo != null) {
         val duration = durationMsPerWidth * textLayoutInfo.textWidth / textLayoutInfo.containerWidth
-        val animation = TargetBasedAnimation(
+        transition.animateValue(
+            initialValue = initialValue,
+            targetValue = -textLayoutInfo.textWidth,
+            typeConverter = Int.VectorConverter,
             animationSpec = infiniteRepeatable(
                 animation = tween(
                     durationMillis = duration,
@@ -100,18 +97,9 @@ fun MarqueeText(
                 ),
                 repeatMode = RepeatMode.Restart
             ),
-            typeConverter = Int.VectorConverter,
-            initialValue = 0,
-            targetValue = -textLayoutInfo.textWidth
         )
-        do {
-            val startTime = withFrameNanos { it }
-            do {
-                val playTime = withFrameNanos { it } - startTime
-                offset = (animation.getValueFromNanos(playTime))
-            } while (!animation.isFinishedFromNanos(playTime))
-            delay(delayMs.toLong())
-        } while (true)
+    } else {
+        remember { mutableStateOf(initialValue) }
     }
 
     SubcomposeLayout(
@@ -125,7 +113,6 @@ fun MarqueeText(
         var secondPlaceableWithOffset: Pair<Placeable, Int>? = null
         if (mainText.width <= constraints.maxWidth) {
             mainText = subcompose(MarqueeLayers.SecondaryText) {
-//                createText(textModifier.fillMaxWidth())
                 createText(textModifier)
             }.first().measure(constraints)
             textLayoutInfoState.value = null
@@ -135,14 +122,15 @@ fun MarqueeText(
                 textWidth = mainText.width + spacing, // テキストの長さ + widthの2/3の長さ
                 containerWidth = constraints.maxWidth // 画面幅
             )
-            val secondTextOffset =
-                mainText.width + spacing + offset // width + spacing + -(0 ~ width + spacing)
+            // offsetは `0 ~ -(mainText.width + spacing)`の間を変化する.
+            // したがって、secondTextOffsetの値は `0 ~ (mainText.width + spacing)`の間を変化する.
+            // これはmarquee効果で流れてくるテキストの左端の位置を表す.
+            val secondTextOffset = mainText.width + spacing + offset
             val secondTextSpace = constraints.maxWidth - secondTextOffset
             if (secondTextSpace > 0) {
-                // 2週目以降のテキストのスタート位置が描画範囲内にある
+                // marquee効果で流れてくるテキストの左端の位置が描画範囲内にある場合
                 secondPlaceableWithOffset = subcompose(MarqueeLayers.SecondaryText) {
                     createText(textModifier)
-//                }.first().measure(infiniteWidthConstraints) to secondTextOffset
                 }.first().measure(constraints) to secondTextOffset
             }
         }
