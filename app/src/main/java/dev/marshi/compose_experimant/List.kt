@@ -48,6 +48,9 @@ fun List() {
         item {
             AnimatedContentSample()
         }
+        item {
+            ImbaranceStartEnd()
+        }
     }
 }
 
@@ -85,7 +88,8 @@ fun AnimatedContentSample() {
         Row() {
             MarqueeText(
                 text = "123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                modifier = Modifier.width(200.dp)
+                modifier = Modifier.width(200.dp),
+                durationMsPerWidth = 8000,
             )
             Text("-------| ")
             Text("-------")

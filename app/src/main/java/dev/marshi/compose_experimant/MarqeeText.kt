@@ -9,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
+import com.google.accompanist.pager.HorizontalPager
 
 /**
  * テキストの幅がレイアウトの幅よりも長いときにmarquee効果を効果を効かせる.
@@ -106,7 +108,7 @@ fun MarqueeText(
         modifier = modifier.clipToBounds()
     ) { constraints ->
         val infiniteWidthConstraints = constraints.copy(maxWidth = Constraints.Infinity)
-        var mainText = subcompose(MarqueeLayers.MainText) {
+        var mainText: Placeable = subcompose(MarqueeLayers.MainText) {
             createText(textModifier)
         }.first().measure(infiniteWidthConstraints)
 
@@ -123,7 +125,7 @@ fun MarqueeText(
                 containerWidth = constraints.maxWidth // 画面幅
             )
             // offsetは `0 ~ -(mainText.width + spacing)`の間を変化する.
-            // したがって、secondTextOffsetの値は `0 ~ (mainText.width + spacing)`の間を変化する.
+            // したがって、secondTextOffsetの値は `0 ~ (mainText.width + spacing)` の間を変化する.
             // これはmarquee効果で流れてくるテキストの左端の位置を表す.
             val secondTextOffset = mainText.width + spacing + offset
             val secondTextSpace = constraints.maxWidth - secondTextOffset
@@ -156,5 +158,5 @@ fun MarqeeTextPreview() {
     }
 }
 
-private enum class MarqueeLayers { MainText, SecondaryText, EdgesGradient }
+private enum class MarqueeLayers { MainText, SecondaryText }
 private data class TextLayoutInfo(val textWidth: Int, val containerWidth: Int)
