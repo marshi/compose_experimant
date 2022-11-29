@@ -12,9 +12,7 @@ import androidx.compose.runtime.setValue
 fun ImbaranceStartEnd() {
     val str = null
     Box {
-        if (str == null) {
-            return
-        }
+
     }
 }
 
